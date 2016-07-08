@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <_WorkingDir>$(MSBuildThisFileDirectory)</_WorkingDir>
+        <_BuildBranch>$(BUILD_BRANCH)</_BuildBranch>
+        <_BuildBranch Condition=" '$(_BuildBranch)' == '' ">dev</_BuildBranch>
+        <_RepositoriesRoot>$(_WorkingDir)/.repositories</_RepositoriesRoot>
+        
+    </PropertyGroup>
+    <ItemGroup>
+        <_AspNetRepositories 
+            Exclude="@(RepositoriesToExclude)" 
+            Include="
+                PlatformAbstractions;
+                Common;
+                JsonPatch;
+                FileSystem;
+                Configuration;
+                DependencyInjection;
+                EventNotification;
+                Options;
+                Logging;
+                dotnet-watch;
+                HtmlAbstractions;
+                UserSecrets;
+                DataProtection;
+                HttpAbstractions;
+                Testing;
+                Microsoft.Data.Sqlite;
+                Caching;
+                Razor;
+                RazorTooling;
+                Hosting;
+                EntityFramework;
+                WebListener;
+                KestrelHttpServer;
+                IISIntegration;
+                ServerTests;
+                Session;
+                CORS;
+                Routing;
+                StaticFiles;
+                Diagnostics;
+                Security;
+                Antiforgery;
+                WebSockets;
+                Localization;
+                BasicMiddleware;
+                Proxy;
+                Mvc;
+                Identity;
+                Scaffolding;
+                SignalR-Server;
+                SignalR-SQLServer;
+                SignalR-Redis;
+                SignalR-ServiceBus;
+                BrowserLink;
+                Entropy;
+                MusicStore;" 
+            />
+        
+        <RepositoriesToBuild 
+            Include="@(_AspNetRepositories)"
+            Condition=" '@(RepositoriesToBuild)' == '' " />
+    </ItemGroup>
+    
+    <Target Name="ci-pull">
+        <RemoveDir 
+            Directories="$(_RepositoriesRoot)"
+            Condition=" Exists('$(_RepositoriesRoot)') " />
+            
+        <MakeDir Directories="$(_RepositoriesRoot)" />
+    
+        <Message Text="Cloning repositories..." />
+        <MsBuild 
+            Projects="$(MSBuildThisFileFullPath)"
+            Targets="_ci-pull"
+            BuildInParallel="true"
+            Properties="ShallowClone=$(ShallowClone);GateBranch=$(GateBranch);_Project=%(RepositoriesToBuild.Identity)" />
+    </Target>
+    
+    
+    <Target Name="_ci-pull">
+        <PropertyGroup>
+            <GitCommand>git clone git@github.com:aspnet/$(_Project) --quiet --depth 1</GitCommand>
+        </PropertyGroup>
+        
+        <!-- Attempt to clone using the GATE_BRANCH. This might not exist for all repos, only repos with reactions to breaking changes so ignore failures if it doesn't exist. -->
+        <Exec 
+            Command="$(GitCommand) --branch $(GATE_BRANCH)"
+            IgnoreExitCode="true" 
+            Condition=" '$(GATE_BRANCH)' != '' "
+            WorkingDirectory="$(_RepositoriesRoot)" />
+        
+        <Exec
+            Command="$(GitCommand) --branch $(_BuildBranch)"
+            WorkingDirectory="$(_RepositoriesRoot)" />
+    </Target>
+    
+    
+    <Target Name="ci-build">
+        <PropertyGroup>
+            <_UniverseArtifacts>$(_WorkingDir)/artifacts/build</_UniverseArtifacts>
+        </PropertyGroup>
+    </Target>
+    
+</Project>
